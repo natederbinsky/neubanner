@@ -248,11 +248,11 @@ def _parse_sectionsearch(html):
 ##############################################################################
 
 def _termform():
-	return _parse_form(_get("/udcprod8/bwlkostm.P_FacSelTerm").text)
+	return _parse_form(_get("/udcprod8/NEUCLSS.p_disp_dyn_sched").text)
 
 # _ -> { term:name }
 def termdict():
-	return _termform()['params']['term']
+	return _termform()['params']['STU_TERM_IN']
 
 def termset(term):
 	global _TERM
