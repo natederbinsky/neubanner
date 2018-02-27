@@ -13,6 +13,8 @@ from bs4 import BeautifulSoup
 
 import getpass
 
+import pickle as pk
+
 ##############################################################################
 ##############################################################################
 
@@ -40,6 +42,24 @@ def login(u=None, p=None):
 	soup = BeautifulSoup(r2.text, "html.parser")
 
 	return (soup.title.string == "Main Menu")
+
+def logout():
+	global _SESSION
+	global _TERM
+
+	_SESSION = requests.session()
+	_TERM = None
+
+def savestate():
+	global _SESSION
+	global _TERM
+
+	return pk.dumps((_SESSION, _TERM))
+
+def loadstate(s):
+	global _SESSION
+
+	_SESSION, _TERM = pk.loads(s)
 
 ##############################################################################
 ##############################################################################
