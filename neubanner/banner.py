@@ -207,6 +207,10 @@ def _parse_studentschedule(html):
 
 	return retval
 
+def _parse_studentemail(html):
+	soup = BeautifulSoup(html, "html.parser")
+	return soup.find("table", {"class":"datadisplaytable"}).find_all("tr")[1].find_all("td")[0].text.strip()
+
 def _process_spanfield(span):
 	contents = ""
 
@@ -359,6 +363,10 @@ def idset(xyz):
 # ]
 def studentschedule():
 	return _parse_studentschedule(_get('/udcprod8/bwlkfstu.P_FacStuSchd').text)
+
+# _ -> String
+def studentemail():
+	return _parse_studentemail(_get('/udcprod8/bwlkosad.P_FacSelectEmalView').text)
 
 # optional -> [
 # 	'title': String,
