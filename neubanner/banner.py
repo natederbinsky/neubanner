@@ -120,6 +120,7 @@ def _parse_summaryclasslist(html):
 
 		spanfields = {
 			"nuid":3,
+			"regstatus":4,
 			"level":6,
 			"program":11,
 			"college":12,
@@ -299,6 +300,7 @@ def crnset(crn):
 # 	{ 'name_lastfirst':String or None,
 # 	  'xyz':String or None,
 # 	  'nuid':String or None,
+#     'regstatus':String or None,
 #  	  'level':String or None,
 # 	  'program':String or None,
 # 	  'college':String or None,

@@ -38,7 +38,7 @@ for section in sections:
 	banner.crnset(section['crn'])
 	for student in banner.summaryclasslist():
 		# no e-mail (fast!)
-		print(csvout(section["section"], student["name_lastfirst"], student["nuid"]))
+		print(csvout(section["section"], student["name_lastfirst"], student["nuid"], "Withdraw" not in student["regstatus"]))
 
 		# with e-mail (per-student request)
 		# banner.idset(student["xyz"])
