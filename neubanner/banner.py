@@ -214,6 +214,174 @@ def _parse_studentemail(html):
 	soup = BeautifulSoup(html, "html.parser")
 	return soup.find("table", {"class":"datadisplaytable"}).find_all("tr")[1].find_all("td")[0].text.strip()
 
+def _parse_studenttranscript(html):
+	retval = {
+		"info": {},
+		"transfer":[],
+		"terms":[],
+		"totals":{},
+		"current": {
+			"courses":[],
+		}
+	}
+	soup = BeautifulSoup(html, "html.parser")
+
+	maintable = soup.find("table", {"class":"datadisplaytable"})
+
+	STUD_INFO = (0,1,2,)
+	TRANSFER = "TRANSFER CREDIT ACCEPTED BY INSTITUTION"
+	INST = "INSTITUTION CREDIT"
+	TERM_TOTAL = "Term Totals (Undergraduate)"
+	INST_TOTAL = "TRANSCRIPT TOTALS (UNDERGRADUATE)"
+	PROGRESS = "COURSES IN PROGRESS"
+
+	phase = 0
+	stuff = None
+	for row in maintable.find_all("tr"):
+		if row.find("th", {"class":"ddtitle",}):
+			if phase in STUD_INFO:
+				phase += 1
+
+			if phase not in STUD_INFO:
+				phase = row.find("th", {"class":"ddtitle",}).find(text=True, recursive=False).strip()
+
+		if phase in STUD_INFO:
+			title = row.find("th", {"class":"ddlabel"})
+			if title:
+				value = row.find("td", {"class":"dddefault"})
+				if value:
+					key = title.text[:title.text.find(":")].strip()
+					value = value.text
+					if key in retval["info"]:
+						retval["info"][key].append(value)
+					else:
+						retval["info"][key] = [value]
+
+		if phase == TRANSFER:
+			th = row.find_all("th")
+			td = row.find_all("td")
+
+			if len(th) is 1 and len(td) is 1:
+				stuff = []
+				retval["transfer"].append({
+					"source":td[0].text,
+					"term":th[0].text[:th[0].text.find(":")],
+					"credits":stuff
+				})
+			elif len(th) is 0 and len(td) is 7:
+				subj = td[0].text
+				course = td[1].text
+				t = td[2].text
+				credits = float(td[4].text)
+				stuff.append({
+					"subject":subj,
+					"course":course,
+					"title":t,
+					"credits":credits,
+				})
+
+		if phase == INST:
+			th = row.find_all("th")
+			td = row.find_all("td")
+
+			if row.find("span", {"class":"fieldOrangetextbold",}):
+				stuff = {
+					"term":row.text[row.text.find(":")+1:].strip(),
+					"courses":[],
+				}
+				retval["terms"].append(stuff)
+			elif len(th) is 1 and len(td) is 1:
+				key = th[0].text.strip()
+				val = td[0].text.strip()
+				stuff[key] = val
+			elif len(th) is 0 and len(td) is 10:
+				subj = td[0].text
+				course = td[1].text
+				level = td[2].text
+				t = td[3].text
+				grade = td[4].text
+				credits = float(td[5].text)
+				quality = float(td[6].text)
+				stuff["courses"].append({
+					"subject":subj,
+					"course":course,
+					"level":level,
+					"title":t,
+					"grade":grade,
+					"credits":credits,
+					"quality":quality,
+				})
+
+		if phase == TERM_TOTAL:
+			if row.find("td", {"class":"ddseparator"}):
+				phase = INST
+			else:
+				th = row.find_all("th")
+				td = row.find_all("td")
+
+				if len(th) is 1 and len(td) is 6:
+					result_type = th[0].text
+					if result_type == "Current Term:":
+						result_type = "current"
+					else:
+						result_type = "cumulative"
+
+					stuff[result_type] = {
+						"h_attempted":float(td[0].text.strip()),
+						"h_passed":float(td[1].text.strip()),
+						"h_earned":float(td[2].text.strip()),
+						"h_gpa":float(td[3].text.strip()),
+						"p_quality":float(td[4].text.strip()),
+						"gpa":float(td[5].text.strip()),
+					}
+
+		if phase == INST_TOTAL:
+			th = row.find_all("th")
+			td = row.find_all("td")
+
+			if len(th) is 1 and len(td) is 6:
+				result_type = th[0].text
+
+				if result_type == "Total Institution:":
+					result_type = "inst"
+				elif result_type == "Total Transfer:":
+					result_type = "transfer"
+				else:
+					result_type = "overall"
+
+				retval["totals"][result_type] = {
+					"h_attempted":float(td[0].p.text.strip()),
+					"h_passed":float(td[1].p.text.strip()),
+					"h_earned":float(td[2].p.text.strip()),
+					"h_gpa":float(td[3].p.text.strip()),
+					"p_quality":float(td[4].p.text.strip()),
+					"gpa":float(td[5].p.text.strip()),
+				}
+
+		if phase == PROGRESS:
+			th = row.find_all("th")
+			td = row.find_all("td")
+
+			if row.find("span", {"class":"fieldOrangetextbold",}):
+				retval["current"]["term"] = row.text[row.text.find(":")+1:].strip()
+
+			if len(th) is 0 and len(td) is 6:
+				subj = td[0].text
+				course = td[1].text
+				level = td[2].text
+				t = td[3].text
+				credits = float(td[4].text)
+
+				retval["current"]["courses"].append({
+					"subject":subj,
+					"course":course,
+					"level":level,
+					"title":t,
+					"credits":credits,
+				})
+
+	return retval
+
 def _process_spanfield(span):
 	contents = ""
 
@@ -371,6 +539,78 @@ def studentschedule():
 # _ -> String
 def studentemail():
 	return _parse_studentemail(_get('/udcprod8/bwlkosad.P_FacSelectEmalView').text)
+
+# _ -> {
+# 	Student Information...
+# 	'info': { key:value }
+#
+# 	Current Courses...
+# 	'current': {
+# 		'term': String,
+# 		'courses': [
+#   		'course': String,
+#   		'credits': #,
+#   		'level': String,
+#   		'subject': String,
+#   		'title': String
+# 		]
+# 	}
+#
+# 	Institutional Credit...
+# 	'terms': [{
+# 		'Academic Standing': String,
+# 		'Major': String,
+# 		'Student Type': String,
+# 		'term': String,
+# 		'courses': [{
+# 			'course': String,
+# 			'credits': #,
+# 			'grade': String,
+# 			'level': String,
+# 			'quality': #,
+# 			'subject': String,
+# 			'title': String
+# 		}],
+# 		'cumulative'/'current': {
+# 			'gpa': #,
+# 			'h_attempted': #,
+# 			'h_earned': #,
+# 			'h_gpa': #,
+# 			'h_passed': #,
+# 			'p_quality': #
+# 		}
+# 	}]
+#
+# 	Transfer Credit...
+# 	'transfer': [{
+# 		'source': String,
+# 		'term': String,
+# 		'credits': [{
+# 			'course': String,
+# 			'credits': #,
+# 			'subject': String,
+# 			'title': String
+# 		}]
+# 	}]
+#
+# 	Totals...
+# 	'totals': {
+# 		'inst'/'transfer'/'overall': {
+# 			'gpa': #,
+# 			'h_attempted': #,
+# 			'h_earned': #,
+# 			'h_gpa': #,
+# 			'h_passed': #,
+# 			'p_quality': #
+# 		}
+# 	}
+def studenttranscript():
+	params = {
+		"levl":"",
+		"tprt":"WEB",
+	}
+
+	return _parse_studenttranscript(_post("/udcprod8/bwlkftrn.P_ViewTran", params).text)
 
 # optional -> [
 # 	'title': String,
