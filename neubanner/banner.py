@@ -25,9 +25,13 @@ def login(u=None, p=None):
 	global _SESSION
 
 	r1 = _SESSION.get("https://nubanner.neu.edu/ssomanager/c/SSB?pkg=twbkwbis.P_GenMenu?name=bmenu.P_MainMnu")
-	purl = urlparse(r1.url)
 
 	soup = BeautifulSoup(r1.text, "html.parser")
+
+	if (soup.title and soup.title.string == "Main Menu"):
+		return True
+
+	purl = urlparse(r1.url)
 	form = soup.find("form")
 
 	params = {}
@@ -41,11 +45,13 @@ def login(u=None, p=None):
 	r2 = _SESSION.post(urljoin(purl.scheme + "://" + purl.netloc, form["action"]), data=params)
 	soup = BeautifulSoup(r2.text, "html.parser")
 
-	return (soup.title.string == "Main Menu")
+	return (soup.title and soup.title.string == "Main Menu")
 
 def logout():
 	global _SESSION
 	global _TERM
+
+	_SESSION.get("https://wl11gp.neu.edu/udcprod8/twbkwbis.P_Logout")
 
 	_SESSION = requests.session()
 	_TERM = None
