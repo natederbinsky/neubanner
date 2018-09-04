@@ -199,7 +199,7 @@ def _parse_studentschedule(html):
 
 					links = row.td.find_all("a")
 					if links:
-						v = [{"name":a["target"], "email":a["href"].split(":")[1]} for a in links]
+						v = [{"name":a["target"], "email":a["href"].split(":")[1]} if a.has_attr("target") else links[0].text.strip() for a in links]
 					else:
 						v = row.td.string.strip()
 					entry[k] = v
