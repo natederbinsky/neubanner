@@ -218,7 +218,7 @@ def _parse_studentschedule(html):
 
 def _parse_studentemail(html):
 	soup = BeautifulSoup(html, "html.parser")
-	return soup.find("table", {"class":"datadisplaytable"}).find_all("tr")[1].find_all("td")[0].text.strip()
+	return soup.find("table", {"class":"datadisplaytable"}).find(text="NU Student Email Address").parent.parent.findNext('td').text.strip()
 
 def _parse_studenttranscript(html):
 	retval = {
