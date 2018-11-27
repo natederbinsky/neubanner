@@ -392,8 +392,11 @@ def _process_spanfield(span):
 	contents = ""
 
 	tag = span.next_sibling
+
 	while True:
-		if tag.name is None:
+		if tag is None:
+			break
+		elif tag.name is None:
 			contents += tag.strip()
 		elif tag.name == "abbr":
 			contents += tag.text
@@ -416,17 +419,18 @@ def _parse_sectionsearch(html):
 		td = th.parent.next_sibling.next_sibling.td
 
 		meetings = []
-		for row in td.table.find_all("tr")[1:]:
-			cols = row.find_all("td")
+		if td.table is not None:
+			for row in td.table.find_all("tr")[1:]:
+				cols = row.find_all("td")
 
-			if (not cols[1].abbr) and ("Exam" not in cols[0].string):
-				meetings.append({
-					"days":list(cols[2].string),
-					"times":cols[1].string.split(" - "),
-					"where":cols[3].string,
-					"capacity":int(cols[5].string),
-					"actual":int(cols[6].string),
-				})
+				if (not cols[1].abbr) and ("Exam" not in cols[0].string):
+					meetings.append({
+						"days":list(cols[2].string),
+						"times":cols[1].string.split(" - "),
+						"where":cols[3].string,
+						"capacity":int(cols[5].string),
+						"actual":int(cols[6].string),
+					})
 
 		splt = th.a.text.split('-')
 		retval.append({
