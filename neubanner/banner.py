@@ -110,6 +110,42 @@ def _parse_form(html, nohidden=False):
 
 #####
 
+def _parse_summarywaitlist(html):
+	retval = []
+	soup = BeautifulSoup(html, "html.parser")
+
+	# 0=course information, 1=enrollment counts
+	infotable = soup.find_all("table", {"class":"datadisplaytable"})
+	if infotable:
+		infotable = soup.find_all("table", {"class":"datadisplaytable"})[2]
+		for student in infotable.find_all("tr")[1:]:
+			info = {}
+			fields = student.find_all("td")
+
+			if (fields[1].span.find("a") is not None):
+				info["name_lastfirst"] = fields[1].span.a.string
+				info["xyz"] = parse_qs(urlparse(fields[1].span.a["href"]).query)["xyz"][0]
+
+			spanfields = {
+				"nuid":2,
+				"level":5,
+				"program":8,
+				"college":9,
+				"major":10,
+				"minor":11,
+				"concentration":12,
+			}
+
+			for k,v in spanfields.items():
+				if (fields[v].find("span") is not None):
+					info[k] = fields[v].span.string
+				else:
+					info[k] = None
+
+			retval.append(info)
+
+	return retval
+
 def _parse_summaryclasslist(html):
 	retval = []
 	soup = BeautifulSoup(html, "html.parser")
@@ -490,6 +526,20 @@ def crnset(crn):
 # ]
 def summaryclasslist():
 	return _parse_summaryclasslist(_get('/udcprod8/bwlkfcwl.P_FacClaListSum').text)
+
+# _ -> [
+# 	{ 'name_lastfirst':String or None,
+# 	  'xyz':String or None,
+# 	  'nuid':String or None,
+#  	  'level':String or None,
+# 	  'program':String or None,
+# 	  'college':String or None,
+# 	  'major':String or None,
+# 	  'minor':String or None,
+# 	  'concentration':String or None, }
+# ]
+def summarywaitlist():
+	return _parse_summarywaitlist(_get('/udcprod8/bwlkfcwl.P_FacWaitListSum').text)
 
 # nuid -> xyz or None
 def getxyz_studid(studid, term=None):
