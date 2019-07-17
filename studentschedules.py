@@ -82,20 +82,22 @@ def demoschedules(crns):
 ##############################################################################
 ##############################################################################
 
-banner.login()
-banner.termset("201830")
+if banner.login():
+	banner.termset("202010")
 
-codes = banner.searchcodes()
+	codes = banner.searchcodes()
 
-# X's instructor code
-def find_instructor(iname):
-	global codes
+	# X's instructor code
+	def find_instructor(iname):
+		global codes
 
-	iname = iname.lower()
-	for icode,instr in codes['sel_instr'].items():
-		if iname in instr.lower():
-			return icode
+		iname = iname.lower()
+		for icode,instr in codes['sel_instr'].items():
+			if iname in instr.lower():
+				return icode
 
-sections = banner.sectionsearch(instructor=[find_instructor('Derbinsky')], subject=['CS'], coursenum='3200')
+	sections = banner.sectionsearch(instructor=[find_instructor('Derbinsky')], subject=['CS'], coursenum='2500')
 
-demoschedules([s['crn'] for s in sections])
+	demoschedules([s['crn'] for s in sections])
+else:
+	print("Login Error!")
