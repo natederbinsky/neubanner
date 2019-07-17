@@ -24,26 +24,46 @@ _TERM = None
 def login(u=None, p=None):
 	global _SESSION
 
+	# Banner!
 	r1 = _SESSION.get("https://nubanner.neu.edu/ssomanager/c/SSB?pkg=twbkwbis.P_GenMenu?name=bmenu.P_MainMnu")
-
 	soup = BeautifulSoup(r1.text, "html.parser")
 
+	# Maybe I'm already logged in?
 	if (soup.title and soup.title.string == "Main Menu"):
 		return True
 
-	purl = urlparse(r1.url)
+	# Otherwise, get the info for step 2
 	form = soup.find("form")
+
+	r1url = urlparse(r1.url)
+	step1url = form["action"]
+	r2url = urljoin(r1url.scheme + "://" + r1url.netloc, step1url)
 
 	params = {}
 	for input_field in form.find_all("input", {"type":"hidden"}):
-		params[input_field["name"]] = input_field["value"]
+		if "value" in input_field.attrs:
+			new_val = input_field["value"] if input_field["value"] != "false" else "true"
+			params[input_field["name"]] = new_val
+		else:
+			params[input_field["name"]] = ""
 
-	params["username"] = input("Login: ") if u is None else u
-	params["password"] = getpass.getpass("Password: ") if p is None else p
-	params["submit"] = "LOGIN"
-
-	r2 = _SESSION.post(urljoin(purl.scheme + "://" + purl.netloc, form["action"]), data=params)
+	# Proceed to actual login
+	r2 = _SESSION.post(r2url, data=params)
 	soup = BeautifulSoup(r2.text, "html.parser")
+
+	form = soup.find("form")
+
+	r2url = urlparse(r2.url)
+	step2url = form["action"]
+	r3url = urljoin(r2url.scheme + "://" + r2url.netloc, step2url)
+
+	params = {}
+	params["j_username"] = input("Login: ") if u is None else u
+	params["j_password"] = getpass.getpass("Password: ") if p is None else p
+	params["_eventId_proceed"] = ""
+
+	r3 = _SESSION.post(r3url, data=params)
+	soup = BeautifulSoup(r3.text, "html.parser")
 
 	return (soup.title and soup.title.string == "Main Menu")
 
