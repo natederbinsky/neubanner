@@ -63,8 +63,10 @@ def _demo_schedulelatex(days, people):
 					color = "away" # yellow
 				print("\\slot{}{{{}}}{{\\tc{}{}{}}}{{{}}}{{1}}".format(color, _demo_day(day), _demo_time(slot//10 if slot <= 120 else (slot - 120)//10), "am" if slot < 120 else "pm", "H" if (slot // 5) % 2 == 1 else "",count))
 
-def demoschedules(crns):
+def demoschedules(crns=[], nuids=[]):
 	days = {d:{t:set() for t in range(80, 200, 5)} for d in _DAYS.keys()}
+
+	done = set()
 
 	for crn in crns:
 		print("== {} ==".format(crn))
@@ -73,11 +75,23 @@ def demoschedules(crns):
 		summary = banner.summaryclasslist()
 
 		for student in summary:
-			print(student['name_lastfirst'])
-			banner.idset(student['xyz'])
-			_demo_studentschedule(banner.studentschedule(), student['xyz'], days)
+			if student['xyz'] not in done:
+				done.add(student['xyz'])
+				print(student['name_lastfirst'])
+				banner.idset(student['xyz'])
+				_demo_studentschedule(banner.studentschedule(), student['xyz'], days)
 
-	_demo_schedulelatex(days, len(summary))
+	if nuids:
+		print("== {} ==".format('NUIDs'))
+		for student in nuids:
+			xyz = banner.getxyz_studid(student)
+			if xyz not in done:
+				done.add(xyz)
+				print(student)
+				banner.idset(xyz)
+				_demo_studentschedule(banner.studentschedule(), xyz, days)
+
+	_demo_schedulelatex(days, len(done))
 
 ##############################################################################
 ##############################################################################
@@ -96,8 +110,14 @@ if banner.login():
 			if iname in instr.lower():
 				return icode
 
-	sections = banner.sectionsearch(instructor=[find_instructor('Derbinsky')], subject=['CS'], coursenum='2500')
+	sections = banner.sectionsearch(instructor=[find_instructor('Derbinsky')], subject=['CS', 'DS', 'CY'])
+	demoschedules(crns=(s['crn'] for s in sections))
 
-	demoschedules([s['crn'] for s in sections])
+	# sections = banner.sectionsearch(subject=['CS'], coursenum='2500')
+	# demoschedules(crns=(s['crn'] for s in sections if s['crn'] != '10461'))
+
+	# demoschedules(crns='10460 11286'.split())
+	# demoschedules(nuids = "001203533 001481520".split())
+
 else:
 	print("Login Error!")
