@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import sys
+import time
 from builtins import input
 
 from future.standard_library import install_aliases
@@ -24,20 +25,28 @@ _TERM = None
 def login(u=None, p=None):
 	global _SESSION
 
-	# Banner!
+	def make_soup(req):
+		return BeautifulSoup(req.text, "html.parser")
+
+	def check_done(soup):
+		return soup.title and soup.title.string == "Main Menu"
+
+	def get_url_from_form(req, soup):
+		form = soup.find("form")
+		base_url = urlparse(req.url)
+		
+		return form, urljoin(base_url.scheme + "://" + base_url.netloc, form["action"])
+
+	# Attempt to connect to Banner
 	r1 = _SESSION.get("https://nubanner.neu.edu/ssomanager/c/SSB?pkg=twbkwbis.P_GenMenu?name=bmenu.P_MainMnu")
-	soup = BeautifulSoup(r1.text, "html.parser")
+	soup = make_soup(r1)
 
 	# Maybe I'm already logged in?
-	if (soup.title and soup.title.string == "Main Menu"):
+	if check_done(soup):
 		return True
 
 	# Otherwise, get the info for step 2
-	form = soup.find("form")
-
-	r1url = urlparse(r1.url)
-	step1url = form["action"]
-	r2url = urljoin(r1url.scheme + "://" + r1url.netloc, step1url)
+	form, r2url = get_url_from_form(r1, soup)
 
 	params = {}
 	for input_field in form.find_all("input", {"type":"hidden"}):
@@ -49,23 +58,123 @@ def login(u=None, p=None):
 
 	# Proceed to actual login
 	r2 = _SESSION.post(r2url, data=params)
-	soup = BeautifulSoup(r2.text, "html.parser")
+	soup = make_soup(r2)
 
-	form = soup.find("form")
-
-	r2url = urlparse(r2.url)
-	step2url = form["action"]
-	r3url = urljoin(r2url.scheme + "://" + r2url.netloc, step2url)
+	# Get the info for step 3
+	form, r3url = get_url_from_form(r2, soup)
 
 	params = {}
 	params["j_username"] = input("Login: ") if u is None else u
 	params["j_password"] = getpass.getpass("Password: ") if p is None else p
 	params["_eventId_proceed"] = ""
 
+	# Submit user/pass for 1FA
 	r3 = _SESSION.post(r3url, data=params)
-	soup = BeautifulSoup(r3.text, "html.parser")
+	soup = make_soup(r3)
 
-	return (soup.title and soup.title.string == "Main Menu")
+	# Am I logged in yet!?
+	if check_done(soup):
+		return True
+
+	# Maybe bad user/pass?
+	if soup.find("p", {"class":"form-error"}):
+		return False
+	
+	# Else, Duo! (step 4)
+	iframe = soup.find("iframe")
+
+	parent_referrer = r3.url
+	tx = iframe["data-sig-request"].split(':')[0]
+	app = iframe["data-sig-request"].split(':')[1]
+	host = iframe["data-host"]
+
+	params_url = {
+		'v':'2.6',
+		'parent':parent_referrer,
+		'tx':tx,
+	}
+
+	params = {
+		'tx':tx,
+		'parent':parent_referrer,
+		'referrer':parent_referrer,
+		'java_version':'',
+		'flash_version':'',
+		'screen_resolution_width':1680,
+		'screen_resolution_height':1050,
+		'color_depth':24,
+		'is_cef_browser':'false',
+	}
+
+	r4url = "https://{}/frame/web/v1/auth?{}".format(host, urlencode(params_url))
+
+	# Submit for Duo 2FA options
+	r4 = _SESSION.post(r4url, data=params)
+	soup = make_soup(r4)
+
+	# Get the info for step 5
+	form, r5url = get_url_from_form(r4, soup)
+	sid = form.find('input', {'name':'sid'})['value']
+
+	params = {
+		'sid':sid,
+		'device':form.find('input', {'name':'preferred_device'})['value'],
+		'factor':form.find('input', {'name':'preferred_factor'})['value'],
+		'out_of_date':'False', 
+		'days_out_of_date':0, 
+		'days_to_block':'None',
+	}
+
+	# Submit device/factor
+	r5 = _SESSION.post(r5url, data=params)
+	json = r5.json()
+
+	# DUO happy?
+	if json['stat'] != 'OK':
+		return False
+
+	txid = json['response']['txid']
+	r6url = "https://{}/frame/status".format(host)
+
+	params = {
+		'sid':sid,
+		'txid':txid,
+	}
+
+	# initiates the 2fa request
+	json = _SESSION.post(r6url, data=params).json()
+	if json['stat'] != 'OK':
+		return False
+
+	# now waits for approval
+	json = _SESSION.post(r6url, data=params).json()
+	if json['stat'] != 'OK':
+		return False
+
+	# now to get info to send back
+	r7url = "https://{}{}".format(host, json['response']['result_url'])
+
+	params = {
+		'sid':sid,
+	}
+
+	json = _SESSION.post(r7url, data=params).json()
+	if json['stat'] != 'OK':
+		return False
+	
+	# finally back to NU
+	r8url = json['response']['parent']
+
+	params = {
+		'sig_response':'{}:{}'.format(json['response']['cookie'], app),
+		'_eventId':'proceed'
+	}
+
+	# go for login!
+	r8 = _SESSION.post(r8url, data=params)
+	soup = make_soup(r8)
+
+	return check_done(soup)
 
 def logout():
 	global _SESSION
