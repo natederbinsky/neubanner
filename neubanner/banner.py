@@ -279,44 +279,52 @@ def _parse_summaryclasslist(html):
 	retval = []
 	soup = BeautifulSoup(html, "html.parser")
 
-	# 0=course information, 1=enrollment counts
-	infotable = soup.find_all("table", {"class":"datadisplaytable"})
-	if infotable:
-		infotable = soup.find_all("table", {"class":"datadisplaytable"})[2]
-		for student in infotable.find_all("tr")[1:]:
-			info = {}
-			fields = student.find_all("td")
+	cans = [soup]
 
-			if (fields[2].span.find("a") is not None):
-				info["name_lastfirst"] = fields[2].span.a.string
-				info["xyz"] = parse_qs(urlparse(fields[2].span.a["href"]).query)["xyz"][0]
+	pagination = soup.find_all("table", {"summary":"This table is for formatting the record set links."})
+	if pagination:
+		links = [a['href'] for a in pagination[0].find_all("a")]
+		cans = [BeautifulSoup(_get(link).text, "html.parser") for link in links]
 
-			spanfields = {
-				"nuid":3,
-				"regstatus":4,
-				"level":6,
-				"program":11,
-				"college":12,
-				"major":13,
-				"minor":14,
-				"concentration":15,
-			}
+	for soup in cans:
+		# 0=course information, 1=enrollment counts
+		infotable = soup.find_all("table", {"class":"datadisplaytable"})
+		if infotable:
+			infotable = soup.find_all("table", {"class":"datadisplaytable"})[2]
+			for student in infotable.find_all("tr")[1:]:
+				info = {}
+				fields = student.find_all("td")
 
-			offsetcheck = 8
-			offset = -2
+				if (fields[2].span.find("a") is not None):
+					info["name_lastfirst"] = fields[2].span.a.string
+					info["xyz"] = parse_qs(urlparse(fields[2].span.a["href"]).query)["xyz"][0]
 
-			if (fields[offsetcheck].find("a") is None):
+				spanfields = {
+					"nuid":3,
+					"regstatus":4,
+					"level":6,
+					"program":11,
+					"college":12,
+					"major":13,
+					"minor":14,
+					"concentration":15,
+				}
+
+				offsetcheck = 8
+				offset = -2
+
+				if (fields[offsetcheck].find("a") is None):
+					for k,v in spanfields.items():
+						if v > offsetcheck:
+							spanfields[k]  = v + offset
+
 				for k,v in spanfields.items():
-					if v > offsetcheck:
-						spanfields[k]  = v + offset
+					if (fields[v].find("span") is not None):
+						info[k] = fields[v].span.string
+					else:
+						info[k] = None
 
-			for k,v in spanfields.items():
-				if (fields[v].find("span") is not None):
-					info[k] = fields[v].span.string
-				else:
-					info[k] = None
-
-			retval.append(info)
+				retval.append(info)
 
 	return retval
 
