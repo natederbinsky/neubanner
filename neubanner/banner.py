@@ -391,7 +391,10 @@ def _parse_studentschedule(html):
 
 def _parse_studentemail(html):
 	soup = BeautifulSoup(html, "html.parser")
-	return soup.find("table", {"class":"datadisplaytable"}).find(text="NU Student Email Address").parent.parent.findNext('td').text.strip()
+	if soup.find("table", {"class":"datadisplaytable"}) and soup.find("table", {"class":"datadisplaytable"}).find(text="NU Student Email Address"):
+		return soup.find("table", {"class":"datadisplaytable"}).find(text="NU Student Email Address").parent.parent.findNext('td').text.strip()
+	else:
+		return None
 
 def _parse_studenttranscript(html):
 	retval = {
@@ -733,7 +736,7 @@ def idset(xyz):
 def studentschedule():
 	return _parse_studentschedule(_get('/udcprod8/bwlkfstu.P_FacStuSchd').text)
 
-# _ -> String
+# _ -> String or None
 def studentemail():
 	return _parse_studentemail(_get('/udcprod8/bwlkosad.P_FacSelectEmalView').text)
 
