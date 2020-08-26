@@ -6,7 +6,7 @@ import pprint
 ##############################################################################
 
 if banner.login():
-	banner.termset('202010')
+	banner.termset('202110')
 
 	codes = None
 
@@ -26,8 +26,11 @@ if banner.login():
 
 	pp = pprint.PrettyPrinter(indent=4)
 
+	# known crn
+	sections = [ {'crn':'19399', 'section':'10'} ]
+
 	# find by course
-	sections = banner.sectionsearch(coursenum='2500', subject=['CS'])
+	# sections = banner.sectionsearch(coursenum='2500', subject=['CS'])
 
 	# find by instructor
 	# sections = banner.sectionsearch(instructor=[find_instructor('Derbinsky')], subject=['%', '%'])
@@ -43,6 +46,12 @@ if banner.login():
 			# with e-mail (per-student request)
 			# banner.idset(student["xyz"])
 			# print(csvout(section["section"], student["name_lastfirst"], student["nuid"], banner.studentemail()))
+
+			# with address (per-student request)
+			# banner.idset(student["xyz"])
+			# addresses = banner.studenttaddresses()
+			# a = addresses['local'] if 'local' in addresses else addresses['permanent']
+			# print(csvout(section["section"], student["name_lastfirst"], student["nuid"], a))
 
 else:
 	print("Login Error!")

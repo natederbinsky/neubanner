@@ -396,6 +396,25 @@ def _parse_studentemail(html):
 	else:
 		return None
 
+def _parse_studentaddresses(html):
+	soup = BeautifulSoup(html, "html.parser")
+
+	result = {}
+
+	datatable = soup.find("table", {"class":"datadisplaytable"})
+	rows = datatable.find_all("tr")
+
+	num_addresses = int((len(rows) + 1) / 4)
+	for a in range(num_addresses):
+		index = a * 4
+
+		atype = rows[index].find_all("th")[0].text.split()[0].lower()
+		astuff = rows[index + 2].find_all("td")[1].text.strip().replace('\xa0', '')
+
+		result[atype] = astuff
+
+	return result
+
 def _parse_studenttranscript(html):
 	retval = {
 		"info": {},
@@ -811,6 +830,12 @@ def studenttranscript():
 	}
 
 	return _parse_studenttranscript(_post("/udcprod8/bwlkftrn.P_ViewTran", params).text)
+
+# _ -> {
+# 	String : String,
+# }
+def studenttaddresses():
+	return _parse_studentaddresses(_post("/udcprod8/bwlkosad.P_FacSelectAtypView").text)
 
 # optional -> [
 # 	'title': String,
