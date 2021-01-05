@@ -397,23 +397,39 @@ def _parse_studentemail(html):
 		return None
 
 def _parse_studentaddresses(html):
-	soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "html.parser")
 
-	result = {}
+    result = {}
 
-	datatable = soup.find("table", {"class":"datadisplaytable"})
-	rows = datatable.find_all("tr")
+    datatable = soup.find("table", {"class":"datadisplaytable"})
+    rows = datatable.find_all("tr")
 
-	num_addresses = int((len(rows) + 1) / 4)
-	for a in range(num_addresses):
-		index = a * 4
+    index = 0
+    atype = None
+    to_add = None
+    while index < len(rows):
+        if not atype:
+            atype = rows[index].find_all("th")[0].text.split()[0].lower()
+            to_add = {}
+        elif len(rows[index].find_all('td')) == 1:
+            result[atype] = to_add
+            atype = None
+            to_add = None
+        elif rows[index].find_all("td")[1].text[:3] == 'No ':
+            to_add[rows[index].find_all("td")[0].text[:-1].lower()] = None
+        else:
+            to_add[rows[index].find_all("td")[0].text[:-1].lower()] = {
+                'dates': rows[index].find_all("td")[1].text,
+                'address': rows[index+1].find_all("td")[1].text.strip().replace('\xa0', ''),
+            }
+            index += 1
+        
+        index += 1
 
-		atype = rows[index].find_all("th")[0].text.split()[0].lower()
-		astuff = rows[index + 2].find_all("td")[1].text.strip().replace('\xa0', '')
+    if atype and to_add:
+        result[atype] = to_add
 
-		result[atype] = astuff
-
-	return result
+    return result
 
 def _parse_studenttranscript(html):
 	retval = {
@@ -832,7 +848,7 @@ def studenttranscript():
 	return _parse_studenttranscript(_post("/udcprod8/bwlkftrn.P_ViewTran", params).text)
 
 # _ -> {
-# 	String : String,
+# 	String : { String: None or { 'dates': String, 'address': String } },
 # }
 def studenttaddresses():
 	return _parse_studentaddresses(_post("/udcprod8/bwlkosad.P_FacSelectAtypView").text)
