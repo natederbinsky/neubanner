@@ -9,4 +9,5 @@ setup(name='neubanner',
       author_email='n.derbinsky@northeastern.edu',
       url='https://derbinsky.info',
       packages=['neubanner'],
+      install_requires=['future', 'bs4', 'requests'],
      )
