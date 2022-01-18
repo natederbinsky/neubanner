@@ -291,36 +291,33 @@ def _parse_summaryclasslist(html):
 		infotable = soup.find_all("table", {"class":"datadisplaytable"})
 		if infotable:
 			infotable = soup.find_all("table", {"class":"datadisplaytable"})[2]
+
+			hmap = {h.text:idx for idx,h in enumerate(infotable.find_all("tr")[0].find_all("th"))}
+
 			for student in infotable.find_all("tr")[1:]:
 				info = {}
 				fields = student.find_all("td")
 
-				if (fields[2].span.find("a") is not None):
-					info["name_lastfirst"] = fields[2].span.a.string
-					info["xyz"] = parse_qs(urlparse(fields[2].span.a["href"]).query)["xyz"][0]
+				if (fields[hmap['Student Name']].span.find("a") is not None):
+					info["name_lastfirst"] = fields[hmap['Student Name']].span.a.string
+					info["xyz"] = parse_qs(urlparse(fields[hmap['Student Name']].span.a["href"]).query)["xyz"][0]
 
 				spanfields = {
-					"nuid":3,
-					"regstatus":4,
-					"level":6,
-					"program":11,
-					"college":12,
-					"major":13,
-					"minor":14,
-					"concentration":15,
+					"nuid": "ID",
+					"regstatus": "Reg Status",
+					"level": "Level",
+					"program": "Program",
+					"college": "College",
+					"major": "Major",
+					"minor": "Minor",
+					"concentration": "Concentration",
 				}
 
-				offsetcheck = 8
-				offset = -2
-
-				if (fields[offsetcheck].find("a") is None):
-					for k,v in spanfields.items():
-						if v > offsetcheck:
-							spanfields[k]  = v + offset
-
 				for k,v in spanfields.items():
-					if (fields[v].find("span") is not None):
-						info[k] = fields[v].span.string
+					idx = hmap[v]
+
+					if (fields[idx].find("span") is not None):
+						info[k] = fields[idx].span.string
 					else:
 						info[k] = None
 
