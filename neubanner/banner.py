@@ -199,18 +199,26 @@ def loadstate(s):
 ##############################################################################
 ##############################################################################
 
-_API_BASE = "https://wl11gp.neu.edu"
-
-def _api(endpoint, method, params):
+def _api(endpoint, method, params, is_public=False):
 	global _SESSION
-	global _API_BASE
-	return getattr(_SESSION,method)(urljoin(_API_BASE, endpoint), data=params)
+
+	base = 'https://wl11gp.neu.edu/udcprod8/' if is_public else 'https://bnrordsp.neu.edu/ssb-prod/'
+
+	return getattr(_SESSION,method)(urljoin(base, endpoint), data=params)
 
 def _get(endpoint, params={}):
 	return _api(endpoint, "get", params)
 
 def _post(endpoint, params={}):
 	return _api(endpoint, "post", params)
+
+def _get_public(endpoint, params={}):
+	return _api(endpoint, "get", params, is_public=True)
+
+def _post_public(endpoint, params={}):
+	return _api(endpoint, "post", params, is_public=True)
+
+
 
 ##############################################################################
 ##############################################################################
@@ -475,14 +483,14 @@ def _parse_studenttranscript(html):
 			th = row.find_all("th")
 			td = row.find_all("td")
 
-			if len(th) is 1 and len(td) is 1:
+			if len(th) == 1 and len(td) == 1:
 				stuff = []
 				retval["transfer"].append({
 					"source":td[0].text,
 					"term":th[0].text[:th[0].text.find(":")],
 					"credits":stuff
 				})
-			elif len(th) is 0 and len(td) is 7:
+			elif len(th) == 0 and len(td) == 7:
 				subj = td[0].text
 				course = td[1].text
 				t = td[2].text
@@ -504,11 +512,11 @@ def _parse_studenttranscript(html):
 					"courses":[],
 				}
 				retval["terms"].append(stuff)
-			elif len(th) is 1 and len(td) is 1:
+			elif len(th) == 1 and len(td) == 1:
 				key = th[0].text.strip()
 				val = td[0].text.strip()
 				stuff[key] = val
-			elif len(th) is 0 and len(td) is 10:
+			elif len(th) == 0 and len(td) == 10:
 				subj = td[0].text
 				course = td[1].text
 				level = td[2].text
@@ -533,7 +541,7 @@ def _parse_studenttranscript(html):
 				th = row.find_all("th")
 				td = row.find_all("td")
 
-				if len(th) is 1 and len(td) is 6:
+				if len(th) == 1 and len(td) == 6:
 					result_type = th[0].text
 					if result_type == "Current Term:":
 						result_type = "current"
@@ -553,7 +561,7 @@ def _parse_studenttranscript(html):
 			th = row.find_all("th")
 			td = row.find_all("td")
 
-			if len(th) is 1 and len(td) is 6:
+			if len(th) == 1 and len(td) == 6:
 				result_type = th[0].text
 
 				if result_type == "Total Institution:":
@@ -579,7 +587,7 @@ def _parse_studenttranscript(html):
 			if row.find("span", {"class":"fieldOrangetextbold",}):
 				retval["current"]["term"] = row.text[row.text.find(":")+1:].strip()
 
-			if len(th) is 0 and len(td) is 6:
+			if len(th) == 0 and len(td) == 6:
 				subj = td[0].text
 				course = td[1].text
 				level = td[2].text
@@ -661,7 +669,7 @@ def _parse_sectionsearch(html):
 ##############################################################################
 
 def _termform():
-	return _parse_form(_get("/udcprod8/NEUCLSS.p_disp_dyn_sched").text)
+	return _parse_form(_get_public("NEUCLSS.p_disp_dyn_sched").text)
 
 # _ -> { term:name }
 def termdict():
@@ -670,19 +678,19 @@ def termdict():
 def termset(term):
 	global _TERM
 
-	_post("/udcprod8/bwlkostm.P_FacStoreTerm", {"term":term, "name1":"bmenu.P_FacMainMnu"})
+	_post("bwlkostm.P_FacStoreTerm", {"term":term, "name1":"bmenu.P_FacMainMnu"})
 	_TERM = term
 
 
 def _crnform():
-	return _parse_form(_get("udcprod8/bwlkocrn.P_FacCrnSel").text)
+	return _parse_form(_get("bwlkocrn.P_FacCrnSel").text)
 
 # _ -> { crn:name }
 def crndict():
 	return _crnform()['params']['crn']
 
 def crnset(crn):
-	_post("/udcprod8/bwlkocrn.P_FacStoreCRN", {"crn":crn, "name1":"bmenu.P_FacMainMnu", "calling_proc_name":"P_FACENTERCRN"})
+	_post("bwlkocrn.P_FacStoreCRN", {"crn":crn, "name1":"bmenu.P_FacMainMnu", "calling_proc_name":"P_FACENTERCRN"})
 
 # _ -> [
 # 	{ 'name_lastfirst':String or None,
@@ -697,7 +705,7 @@ def crnset(crn):
 # 	  'concentration':String or None, }
 # ]
 def summaryclasslist():
-	return _parse_summaryclasslist(_get('/udcprod8/bwlkfcwl.P_FacClaListSum').text)
+	return _parse_summaryclasslist(_get('bwlkfcwl.P_FacClaListSum').text)
 
 # _ -> [
 # 	{ 'name_lastfirst':String or None,
@@ -711,7 +719,7 @@ def summaryclasslist():
 # 	  'concentration':String or None, }
 # ]
 def summarywaitlist():
-	return _parse_summarywaitlist(_get('/udcprod8/bwlkfcwl.P_FacWaitListSum').text)
+	return _parse_summarywaitlist(_get('bwlkfcwl.P_FacWaitListSum').text)
 
 # nuid -> xyz or None
 def getxyz_studid(studid, term=None):
@@ -730,7 +738,7 @@ def getxyz_studid(studid, term=None):
 		"search_type":"All", # Stu, Adv, Both, All
 	}
 
-	return _parse_verifyxyz(_post("/udcprod8/bwlkoids.P_FacVerifyID", params).text)
+	return _parse_verifyxyz(_post("bwlkoids.P_FacVerifyID", params).text)
 
 # -> { xyz:name/info }
 def getxyz_name(first="", last="", stype="All", term=None):
@@ -749,7 +757,7 @@ def getxyz_name(first="", last="", stype="All", term=None):
 		"search_type":stype, # Stu, Adv, Both, All
 	}
 
-	return _parse_choosexyz(_post("/udcprod8/bwlkoids.P_FacVerifyID", params).text)
+	return _parse_choosexyz(_post("bwlkoids.P_FacVerifyID", params).text)
 
 def idset(xyz):
 	params = {
@@ -758,7 +766,7 @@ def idset(xyz):
 		"xyz":xyz,
 	}
 
-	_post("/udcprod8/bwlkoids.P_FacStoreID", params)
+	_post("bwlkoids.P_FacStoreID", params)
 
 # _ -> [
 # 	'title': String,
@@ -766,11 +774,11 @@ def idset(xyz):
 #   'meetings': [ { 'type':String, 'days':[ String ], 'times':[ String ] } ]
 # ]
 def studentschedule():
-	return _parse_studentschedule(_get('/udcprod8/bwlkfstu.P_FacStuSchd').text)
+	return _parse_studentschedule(_get('bwlkfstu.P_FacStuSchd').text)
 
 # _ -> String or None
 def studentemail():
-	return _parse_studentemail(_get('/udcprod8/bwlkosad.P_FacSelectEmalView').text)
+	return _parse_studentemail(_get('bwlkosad.P_FacSelectEmalView').text)
 
 # _ -> {
 # 	Student Information...
@@ -842,13 +850,13 @@ def studenttranscript():
 		"tprt":"WEB",
 	}
 
-	return _parse_studenttranscript(_post("/udcprod8/bwlkftrn.P_ViewTran", params).text)
+	return _parse_studenttranscript(_post("bwlkftrn.P_ViewTran", params).text)
 
 # _ -> {
 # 	String : { String: None or { 'dates': String, 'address': String } },
 # }
 def studenttaddresses():
-	return _parse_studentaddresses(_post("/udcprod8/bwlkosad.P_FacSelectAtypView").text)
+	return _parse_studentaddresses(_post("bwlkosad.P_FacSelectAtypView").text)
 
 # optional -> [
 # 	'title': String,
@@ -897,9 +905,9 @@ def sectionsearch(
 		("sel_title",coursetitle),
 		("sel_from_cred",creditfrom),
 		("sel_to_cred",creditto),
-		("begin_hh",end_hh),
-		("begin_mi",end_mi),
-		("begin_ap",end_ap),
+		("begin_hh",begin_hh),
+		("begin_mi",begin_mi),
+		("begin_ap",begin_ap),
 		("end_hh",end_hh),
 		("end_mi",end_mi),
 		("end_ap",end_ap),
@@ -924,7 +932,7 @@ def sectionsearch(
 		for s in source:
 			params.append((key, s))
 
-	return _parse_sectionsearch(_post("/udcprod8/NEUCLSS.p_class_search", params).text)
+	return _parse_sectionsearch(_post_public("NEUCLSS.p_class_search", params).text)
 
 # _ -> { param:{ code:val } }
 def searchcodes(term=None):
@@ -937,4 +945,4 @@ def searchcodes(term=None):
 		("STU_TERM_IN", term)
 	]
 
-	return _parse_form(_post("/udcprod8/NEUCLSS.p_class_select", params).text, nohidden=True)['params']
+	return _parse_form(_post_public("NEUCLSS.p_class_select", params).text, nohidden=True)['params']
