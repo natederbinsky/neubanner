@@ -202,7 +202,8 @@ def loadstate(s):
 def _api(endpoint, method, params, is_public=False):
 	global _SESSION
 
-	base = 'https://wl11gp.neu.edu/udcprod8/' if is_public else 'https://bnrordsp.neu.edu/ssb-prod/'
+	# base = 'https://wl11gp.neu.edu/udcprod8/' if is_public else 'https://bnrordsp.neu.edu/ssb-prod/'
+	base = 'https://bnrordsp.neu.edu/ssb-prod/'
 
 	return getattr(_SESSION,method)(urljoin(base, endpoint), data=params)
 
