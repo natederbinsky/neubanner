@@ -180,7 +180,8 @@ def logout():
 	global _SESSION
 	global _TERM
 
-	_SESSION.get("https://wl11gp.neu.edu/udcprod8/twbkwbis.P_Logout")
+	# _SESSION.get("https://wl11gp.neu.edu/udcprod8/twbkwbis.P_Logout")
+	_SESSION.get("https://bnrordsp.neu.edu/ssb-prod/twbkwbis.P_Logout")
 
 	_SESSION = requests.session()
 	_TERM = None
