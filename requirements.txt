@@ -1,8 +1,8 @@
-beautifulsoup4==4.6.0
+beautifulsoup4==4.12.2
 bs4==0.0.1
 certifi==2023.7.22
 chardet==3.0.4
 future==0.18.3
 idna==2.6
 requests==2.31.0
-urllib3==1.26.5
+urllib3==1.26.17
